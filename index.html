@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>สถานีสัตว์เลี้ยง - ระบบบันทึกงาน</title>
+    
+    <!-- Google Fonts: Prompt -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- HTML5-QRCode Library (สำหรับสแกนบาร์โค้ด/QR ผ่านกล้องมือถือ) -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <style>
+        :root {
+            --primary-red: #D32F2F;
+            --dark-red: #B71C1C;
+            --light-red: #FFEBEE;
+            --bg-gray: #F5F6F8;
+            --white: #FFFFFF;
+            --text-dark: #212121;
+            --text-muted: #757575;
+            --border-color: #E0E0E0;
+            --success-green: #2E7D32;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Prompt', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #EAECEF;
+            color: var(--text-dark);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        /* Mobile App Container */
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            background-color: var(--bg-gray);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 20px rgba(0,0,0,0.08);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            background-color: var(--primary-red);
+            color: var(--white);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 6px rgba(211, 47, 47, 0.25);
+        }
+
+        .header-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: var(--white);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .back-btn:active {
+            background: rgba(255,255,255,0.35);
+        }
+
+        /* Pages */
+        .page {
+            display: none;
+            padding: 20px;
+            flex: 1;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .page.active {
+            display: flex;
+        }
+
+        /* Staff Selector Card */
+        .card {
+            background: var(--white);
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border: 1px solid var(--border-color);
+        }
+
+        .date-badge {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        /* Home Grid 2 Menus */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-top: 4px;
+        }
+
+        .menu-card {
+            background: var(--white);
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px 14px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+        }
+
+        .menu-card:active {
+            transform: scale(0.97);
+            border-color: var(--primary-red);
+            background-color: var(--light-red);
+        }
+
+        .menu-icon {
+            width: 56px;
+            height: 56px;
+            background-color: var(--light-red);
+            color: var(--primary-red);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+        }
+
+        .menu-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .menu-desc {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            line-height: 1.3;
+        }
+
+        /* Scanner Section */
+        .scanner-box {
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            min-height: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #reader-restock, #reader-repack {
+            width: 100%;
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .btn-outline {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid var(--primary-red);
+            background: var(--white);
+            color: var(--primary-red);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        /* Form Inputs */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1.5px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-red);
+        }
+
+        .form-control.barcode-display {
+            background-color: #FFF8F8;
+            border-color: var(--primary-red);
+            font-weight: 600;
+            color: var(--primary-red);
+            font-size: 1.1rem;
+        }
+
+        .product-name-tag {
+            font-size: 0.85rem;
+            color: var(--success-green);
+            font-weight: 500;
+            min-height: 20px;
+        }
+
+        /* Stepper (+/- Buttons) */
+        .stepper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-gray);
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            cursor: pointer;
+        }
+
+        .step-btn:active {
+            background: #DCDCDC;
+        }
+
+        .step-input {
+            flex: 1;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        /* Primary Submit Button */
+        .btn-primary {
+            width: 100%;
+            padding: 15px;
+            background-color: var(--primary-red);
+            color: var(--white);
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
+            transition: background 0.2s;
+            margin-top: 6px;
+        }
+
+        .btn-primary:active {
+            background-color: var(--dark-red);
+            transform: translateY(1px);
+        }
+
+        /* Recent Logs Section */
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .log-header h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .btn-export {
+            background: #212121;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            cursor: pointer;
+        }
+
+        .log-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .log-item {
+            background: var(--bg-gray);
+            padding: 10px 12px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-red);
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .log-badge {
+            background: var(--light-red);
+            color: var(--primary-red);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background-color: var(--success-green);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+            z-index: 999;
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.error {
+            background-color: var(--dark-red);
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-title" id="headerTitle">
+            🐾 สถานีสัตว์เลี้ยง
+        </div>
+        <button class="back-btn" id="backBtn" style="display: none;" onclick="navigateTo('home')">
+            ← กลับเมนูหลัก
+        </button>
+    </header>
+
+    <!-- ================= PAGE 1: HOME MENU ================= -->
+    <main id="page-home" class="page active">
+        <div class="card">
+            <span class="date-badge" id="currentDate">กำลังโหลดวันที่...</span>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="staffName">👤 พนักงานผู้ปฏิบัติงาน</label>
+                <select id="staffName" class="form-control" onchange="saveStaffName()">
+                    <option value="พนักงานหน้าร้าน 1">พนักงานหน้าร้าน 1</option>
+                    <option value="พนักงานหน้าร้าน 2">พนักงานหน้าร้าน 2</option>
+                    <option value="ผู้จัดการร้าน">ผู้จัดการร้าน</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="menu-grid">
+            <!-- เมนูที่ 1: บันทึกเติมของ -->
+            <div class="menu-card" onclick="navigateTo('restock')">
+                <div class="menu-icon">📦</div>
+                <div class="menu-title">บันทึกเติมของ</div>
+                <div class="menu-desc">สแกนกล่อง/ลัง/กระสอบ<br>เพื่อเติมสินค้าขึ้นชั้น</div>
+            </div>
+
+            <!-- เมนูที่ 2: บันทึกทำถุงแบ่ง -->
+            <div class="menu-card" onclick="navigateTo('repack')">
+                <div class="menu-icon">⚖️</div>
+                <div class="menu-title">บันทึกทำถุงแบ่ง</div>
+                <div class="menu-desc">สแกนกระสอบใหญ่<br>เพื่อบันทึกยอดแบ่งขาย</div>
+            </div>
+        </div>
+
+        <!-- ประวัติการทำงานรวมล่าสุด -->
+        <div class="card" style="margin-top: auto;">
+            <div class="log-header">
+                <h3>📋 บันทึกล่าสุดวันนี้ (<span id="totalLogCount">0</span>)</h3>
+                <button class="btn-export" onclick="copyJsonLogs()">คัดลอก JSON</button>
+            </div>
+            <div class="log-list" id="homeLogList">
+                <div style="text-align:center; color:#999; font-size:0.85rem; padding:10px;">ยังไม่มีรายการบันทึก</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ================= PAGE 2: RESTOCK (บันทึกเติมของ) ================= -->
+    <section id="page-restock" class="page">
+        <div class="card">
+            <div class="scanner-box">
+                <div id="reader-restock"></div>
+            </div>
+            <div class="camera-controls">
+                <button class="btn-outline" onclick="startScanner('restock')">📷 เปิดกล้องสแกน</button>
+                <button class="btn-outline" onclick="stopScanner()">⏹ ปิดกล้อง</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="form-group">
+                <label>รหัสสินค้า (กล่อง / ลัง / กระสอบ)</label>
+                <input type="text" id="restock-barcode" class="form-control barcode-display" placeholder="สแกนบาร์โค้ด หรือพิมพ์รหัส..." oninput="lookupProduct('restock')">
+                <div class="product-name-tag" id="restock-product-name"></div>
+            </div>
+
+            <div class="form-group">
+                <label>จำนวนที่เติม (ชิ้น / ถุง / กระสอบ)</label>
+                <div class="stepper">
+                    <button type="button" class="step-btn" onclick="adjustQty('restock-qty', -1)">-</button>
+                    <input type="number" id="restock-qty" class="form-control step-input" value="1" min="1">
+                    <button type="button" class="step-btn" onclick="adjustQty('restock-qty', 1)">+</button>
+                </div>
+            </div>
+
+            <button class="btn-primary" onclick="submitTransaction('RESTOCK')">
+                ✅ บันทึกการเติมของ
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="log-header">
+                <h3>ประวัติเติมของล่าสุด</h3>
+            </div>
+            <div class="log-list" id="restockLogList"></div>
+        </div>
+    </section>
+
+    <!-- ================= PAGE 3: REPACK (บันทึกทำถุงแบ่ง) ================= -->
+    <section id="page-repack" class="page">
+        <div class="card">
+            <div class="scanner-box">
+                <div id="reader-repack"></div>
+            </div>
+            <div class="camera-controls">
+                <button class="btn-outline" onclick="startScanner('repack')">📷 เปิดกล้องสแกน</button>
+                <button class="btn-outline" onclick="stopScanner()">⏹ ปิดกล้อง</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="form-group">
+                <label>รหัสสินค้ากระสอบตั้งต้น</label>
+                <input type="text" id="repack-barcode" class="form-control barcode-display" placeholder="สแกนรหัสที่กระสอบ..." oninput="lookupProduct('repack')">
+                <div class="product-name-tag" id="repack-product-name"></div>
+            </div>
+
+            <div class="form-group">
+                <label>จำนวนกระสอบที่แกะแบ่ง (กระสอบ)</label>
+                <div class="stepper">
+                    <button type="button" class="step-btn" onclick="adjustQty('repack-source-qty', -1)">-</button>
+                    <input type="number" id="repack-source-qty" class="form-control step-input" value="1" min="1">
+                    <button type="button" class="step-btn" onclick="adjustQty('repack-source-qty', 1)">+</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>จำนวนถุงแบ่งที่ได้ (ถุงย่อย)</label>
+                <div class="stepper">
+                    <button type="button" class="step-btn" onclick="adjustQty('repack-output-qty', -1)">-</button>
+                    <input type="number" id="repack-output-qty" class="form-control step-input" value="10" min="1">
+                    <button type="button" class="step-btn" onclick="adjustQty('repack-output-qty', 1)">+</button>
+                </div>
+            </div>
+
+            <button class="btn-primary" onclick="submitTransaction('REPACK')">
+                ⚖️ ทำเป็นถุงแบ่ง
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="log-header">
+                <h3>ประวัติทำถุงแบ่งล่าสุด</h3>
+            </div>
+            <div class="log-list" id="repackLogList"></div>
+        </div>
+    </section>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="toast">บันทึกข้อมูลสำเร็จ!</div>
+
+<script>
+    // ==========================================
+    // 1. MASTER DATA (JSON จำลองฐานข้อมูลสินค้า)
+    // ==========================================
+    const PRODUCT_MASTER_JSON = {
+        "8850123456789": "Royal Canin Indoor 2kg",
+        "8859876543210": "อาหารแมว Sunpo รสปลาทู 10kg (กระสอบ)",
+        "8851112223334": "VF+Core สีแดง บำรุงเลือด (กล่อง 30 ซอง)",
+        "8854445556667": "อาหารแมว Halal สูตรแม่และลูก 1.2kg"
+    };
+
+    // URL สำหรับเชื่อมต่อ Google Apps Script (นำ Web App URL มาใส่ตรงนี้เมื่อพร้อมใช้งานจริง)
+    const GOOGLE_SCRIPT_WEBHOOK_URL = ""; 
+
+    // ==========================================
+    // 2. STATE & INITIALIZATION
+    // ==========================================
+    let html5QrCode = null;
+    let currentScannerMode = null;
+    let transactionLogs = JSON.parse(localStorage.getItem('pet_station_logs')) || [];
+
+    window.onload = () => {
+        // แสดงวันที่ปัจจุบันภาษาไทย
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('currentDate').innerText = new Date().toLocaleDateString('th-TH', options);
+
+        // โหลดชื่อพนักงานที่เคยเลือกไว้
+        const savedStaff = localStorage.getItem('pet_station_staff');
+        if (savedStaff) {
+            document.getElementById('staffName').value = savedStaff;
+        }
+
+        renderLogs();
+    };
+
+    function saveStaffName() {
+        const staff = document.getElementById('staffName').value;
+        localStorage.setItem('pet_station_staff', staff);
+    }
+
+    // ==========================================
+    // 3. NAVIGATION & CAMERA CONTROL
+    // ==========================================
+    async function navigateTo(pageName) {
+        await stopScanner(); // ปิดกล้องทุกครั้งที่เปลี่ยนหน้า
+
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(`page-${pageName}`).classList.add('active');
+
+        const headerTitle = document.getElementById('headerTitle');
+        const backBtn = document.getElementById('backBtn');
+
+        if (pageName === 'home') {
+            headerTitle.innerHTML = '🐾 สถานีสัตว์เลี้ยง';
+            backBtn.style.display = 'none';
+            renderLogs();
+        } else if (pageName === 'restock') {
+            headerTitle.innerHTML = '📦 บันทึกเติมของ';
+            backBtn.style.display = 'flex';
+            startScanner('restock');
+        } else if (pageName === 'repack') {
+            headerTitle.innerHTML = '⚖️ บันทึกทำถุงแบ่ง';
+            backBtn.style.display = 'flex';
+            startScanner('repack');
+        }
+    }
+
+    function startScanner(mode) {
+        if (html5QrCode) {
+            stopScanner().then(() => initCamera(mode));
+        } else {
+            initCamera(mode);
+        }
+    }
+
+    function initCamera(mode) {
+        currentScannerMode = mode;
+        const elementId = mode === 'restock' ? 'reader-restock' : 'reader-repack';
+        html5QrCode = new Html5Qrcode(elementId);
+
+        const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+
+        html5QrCode.start(
+            { facingMode: "environment" }, // บังคับเปิดกล้องหลัง
+            config,
+            (decodedText) => {
+                // เมื่อสแกนสำเร็จ
+                playBeep();
+                if (navigator.vibrate) navigator.vibrate(100);
+
+                const inputId = mode === 'restock' ? 'restock-barcode' : 'repack-barcode';
+                document.getElementById(inputId).value = decodedText;
+                lookupProduct(mode);
+                showToast(`สแกนรหัส: ${decodedText}`);
+            },
+            (errorMessage) => {
+                // ข้าม error ระหว่างกำลังส่องหาบาร์โค้ด
+            }
+        ).catch(err => {
+            console.warn("Camera Error:", err);
+            showToast("ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตสิทธิ์กล้องหรือพิมพ์รหัสเอง", true);
+        });
+    }
+
+    async function stopScanner() {
+        if (html5QrCode) {
+            try {
+                await html5QrCode.stop();
+                html5QrCode.clear();
+            } catch (e) {
+                console.log("Scanner already stopped");
+            }
+            html5QrCode = null;
+        }
+    }
+
+    // ==========================================
+    // 4. PRODUCT LOOKUP & FORM HELPERS
+    // ==========================================
+    function lookupProduct(mode) {
+        const barcode = document.getElementById(`${mode}-barcode`).value.trim();
+        const nameTag = document.getElementById(`${mode}-product-name`);
+
+        if (!barcode) {
+            nameTag.innerText = "";
+            return;
+        }
+
+        if (PRODUCT_MASTER_JSON[barcode]) {
+            nameTag.style.color = "var(--success-green)";
+            nameTag.innerText = `✔ สินค้า: ${PRODUCT_MASTER_JSON[barcode]}`;
+        } else {
+            nameTag.style.color = "var(--text-muted)";
+            nameTag.innerText = `ℹ️ รหัสสินค้าใหม่ (ไม่อยู่ในฐานข้อมูลหลัก)`;
+        }
+    }
+
+    function adjustQty(inputId, delta) {
+        const input = document.getElementById(inputId);
+        let val = parseInt(input.value) || 0;
+        val = Math.max(1, val + delta);
+        input.value = val;
+    }
+
+    // เสียง Beep สังเคราะห์ (ไม่ต้องใช้ไฟล์ mp3)
+    function playBeep() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.value = 1000;
+            gain.gain.value = 0.1;
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            setTimeout(() => osc.stop(), 120);
+        } catch (e) {}
+    }
+
+    // ==========================================
+    // 5. DATA SCHEMA & TRANSACTION SUBMISSION
+    // ==========================================
+    function submitTransaction(actionType) {
+        const staff = document.getElementById('staffName').value;
+        const now = new Date();
+        const timestamp = now.getFullYear() + "-" +
+            String(now.getMonth() + 1).padStart(2, '0') + "-" +
+            String(now.getDate()).padStart(2, '0') + " " +
+            String(now.getHours()).padStart(2, '0') + ":" +
+            String(now.getMinutes()).padStart(2, '0') + ":" +
+            String(now.getSeconds()).padStart(2, '0');
+
+        let payload = {
+            transaction_id: `TXN-${Date.now()}`,
+            timestamp: timestamp,
+            staff_name: staff,
+            action_type: actionType, // 'RESTOCK' หรือ 'REPACK'
+            barcode: "",
+            product_name: "",
+            source_qty: 0,
+            output_qty: 0
+        };
+
+        if (actionType === 'RESTOCK') {
+            const barcode = document.getElementById('restock-barcode').value.trim();
+            const qty = parseInt(document.getElementById('restock-qty').value) || 0;
+
+            if (!barcode) {
+                showToast("⚠️ กรุณาสแกนหรือกรอกรหัสสินค้าก่อนบันทึก", true);
+                return;
+            }
+
+            payload.barcode = barcode;
+            payload.product_name = PRODUCT_MASTER_JSON[barcode] || "ไม่ระบุชื่อสินค้า";
+            payload.source_qty = qty; // จำนวนที่เติมขึ้นชั้น
+            payload.output_qty = qty;
+
+            // เคลียร์ค่าเตรียมสแกนชิ้นถัดไป
+            document.getElementById('restock-barcode').value = "";
+            document.getElementById('restock-product-name').innerText = "";
+            document.getElementById('restock-qty').value = 1;
+
+        } else if (actionType === 'REPACK') {
+            const barcode = document.getElementById('repack-barcode').value.trim();
+            const sourceQty = parseInt(document.getElementById('repack-source-qty').value) || 0;
+            const outputQty = parseInt(document.getElementById('repack-output-qty').value) || 0;
+
+            if (!barcode) {
+                showToast("⚠️ กรุณาสแกนรหัสกระสอบตั้งต้นก่อนบันทึก", true);
+                return;
+            }
+
+            payload.barcode = barcode;
+            payload.product_name = PRODUCT_MASTER_JSON[barcode] || "ไม่ระบุชื่อสินค้า";
+            payload.source_qty = sourceQty; // จำนวนกระสอบที่เบิกมาแกะ (ตัดสต็อกใหญ่)
+            payload.output_qty = outputQty; // จำนวนถุงแบ่งที่ผลิตได้ (เพิ่มสต็อกย่อย)
+
+            // เคลียร์ค่าเตรียมสแกนชิ้นถัดไป
+            document.getElementById('repack-barcode').value = "";
+            document.getElementById('repack-product-name').innerText = "";
+            document.getElementById('repack-source-qty').value = 1;
+        }
+
+        // บันทึกลง LocalStorage (เรียงจากใหม่ไปเก่า)
+        transactionLogs.unshift(payload);
+        localStorage.setItem('pet_station_logs', JSON.stringify(transactionLogs));
+
+        // ส่งข้อมูลไปยัง Google Sheets (หากตั้งค่า URL ไว้)
+        sendToGoogleSheets(payload);
+
+        renderLogs();
+        showToast(actionType === 'RESTOCK' ? "✅ บันทึกการเติมของสำเร็จ!" : "⚖️ บันทึกทำถุงแบ่งสำเร็จ!");
+    }
+
+    function sendToGoogleSheets(data) {
+        if (!GOOGLE_SCRIPT_WEBHOOK_URL) return;
+
+        fetch(GOOGLE_SCRIPT_WEBHOOK_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }).catch(err => console.error("Webhook Error:", err));
+    }
+
+    // ==========================================
+    // 6. RENDER LOGS & EXPORT JSON
+    // ==========================================
+    function renderLogs() {
+        document.getElementById('totalLogCount').innerText = transactionLogs.length;
+
+        // 1. หน้า Home (แสดง 5 รายการล่าสุดรวม)
+        const homeList = document.getElementById('homeLogList');
+        homeList.innerHTML = transactionLogs.length === 0 
+            ? '<div style="text-align:center; color:#999; font-size:0.85rem; padding:10px;">ยังไม่มีรายการบันทึก</div>'
+            : transactionLogs.slice(0, 5).map(item => `
+                <div class="log-item">
+                    <div>
+                        <strong>${item.barcode}</strong>
+                        <div style="font-size:0.75rem; color:#666;">${item.timestamp.split(' ')[1]} น. • ${item.staff_name}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <span class="log-badge">${item.action_type === 'RESTOCK' ? 'เติมของ' : 'ถุงแบ่ง'}</span>
+                        <div style="font-size:0.8rem; font-weight:600; margin-top:2px;">
+                            ${item.action_type === 'RESTOCK' ? `+${item.output_qty} ชิ้น` : `${item.source_qty} กระสอบ ➔ ${item.output_qty} ถุง`}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+        // 2. หน้า Restock
+        const restockLogs = transactionLogs.filter(i => i.action_type === 'RESTOCK').slice(0, 5);
+        document.getElementById('restockLogList').innerHTML = restockLogs.map(item => `
+            <div class="log-item">
+                <div><strong>${item.barcode}</strong> (${item.timestamp.split(' ')[1]})</div>
+                <div style="font-weight:600; color:var(--primary-red);">+${item.output_qty}</div>
+            </div>
+        `).join('') || '<div style="color:#999; font-size:0.8rem;">ยังไม่มีประวัติเติมของ</div>';
+
+        // 3. หน้า Repack
+        const repackLogs = transactionLogs.filter(i => i.action_type === 'REPACK').slice(0, 5);
+        document.getElementById('repackLogList').innerHTML = repackLogs.map(item => `
+            <div class="log-item">
+                <div><strong>${item.barcode}</strong> (${item.timestamp.split(' ')[1]})</div>
+                <div style="font-weight:600; color:var(--primary-red);">${item.source_qty} กระสอบ ➔ ${item.output_qty} ถุง</div>
+            </div>
+        `).join('') || '<div style="color:#999; font-size:0.8rem;">ยังไม่มีประวัติทำถุงแบ่ง</div>';
+    }
+
+    function copyJsonLogs() {
+        if (transactionLogs.length === 0) {
+            showToast("ยังไม่มีข้อมูล JSON ให้คัดลอก", true);
+            return;
+        }
+        const jsonString = JSON.stringify(transactionLogs, null, 2);
+        navigator.clipboard.writeText(jsonString).then(() => {
+            showToast("📋 คัดลอกข้อมูล JSON เรียบร้อยแล้ว!");
+        });
+    }
+
+    function showToast(message, isError = false) {
+        const toast = document.getElementById('toast');
+        toast.innerText = message;
+        toast.className = isError ? 'toast error show' : 'toast show';
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 2500);
+    }
+</script>
+
+</body>
+</html>
